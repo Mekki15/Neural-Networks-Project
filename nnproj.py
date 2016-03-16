@@ -106,7 +106,12 @@ cross_entropy = -tf.reduce_sum(y_*tf.log(y_conv))
 train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
 correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(y_, 1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+
+# Initialize variables
 sess.run(tf.initialize_all_variables())
+
+#  Op to save the network
+saver = tf.train.Saver()
 
 # Extraxt a batch of random images from the training set
 def get_batch(n):
@@ -117,7 +122,7 @@ def get_batch(n):
 	return X_train_batch, y_train_batch
 
 # Training
-for i in range(100):
+for i in range(1):
 	batch_x, batch_y = get_batch(50)
 	#~ if i%100 == 0:
 	train_accuracy = accuracy.eval(feed_dict={x: batch_x, y_: batch_y, keep_prob: 1.0})
@@ -126,4 +131,9 @@ for i in range(100):
 
 # Testing
 print("test accuracy %g"%accuracy.eval(feed_dict={x: X_test, y_: y_test, keep_prob: 1.0}))
+
+# Save the variables to disk
+save_path = saver.save(sess, "model.ckpt")
+print("Model saved in file: %s" % save_path)
+
 
