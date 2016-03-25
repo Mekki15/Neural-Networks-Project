@@ -1,0 +1,71 @@
+licenses(["notice"])  # Apache 2.0
+
+exports_files(["LICENSE"])
+
+py_library(
+    name = "robocup_input",
+    srcs = ["robocup_input.py"],
+    srcs_version = "PY2AND3",
+    visibility = ["//tensorflow:internal"],
+    deps = [
+        "//tensorflow:tensorflow_py",
+    ],
+)
+
+py_test(
+    name = "robocup_input_test",
+    srcs = ["robocup_input_test.py"],
+    srcs_version = "PY2AND3",
+    deps = [
+        ":robocup_input",
+        "//tensorflow:tensorflow_py",
+        "//tensorflow/python:framework_test_lib",
+        "//tensorflow/python:platform_test",
+    ],
+)
+
+py_library(
+    name = "robocup",
+    srcs = ["robocup.py"],
+    srcs_version = "PY2AND3",
+    deps = [
+        ":robocup_input",
+        "//tensorflow:tensorflow_py",
+    ],
+)
+
+py_binary(
+    name = "robocup_eval",
+    srcs = [
+        "robocup_eval.py",
+    ],
+    srcs_version = "PY2AND3",
+    visibility = ["//tensorflow:__subpackages__"],
+    deps = [
+        ":robocup",
+    ],
+)
+
+py_binary(
+    name = "robocup_train",
+    srcs = [
+        "robocup_train.py",
+    ],
+    srcs_version = "PY2AND3",
+    visibility = ["//tensorflow:__subpackages__"],
+    deps = [
+        ":robocup",
+    ],
+)
+
+filegroup(
+    name = "all_files",
+    srcs = glob(
+        ["**/*"],
+        exclude = [
+            "**/METADATA",
+            "**/OWNERS",
+        ],
+    ),
+    visibility = ["//tensorflow:__subpackages__"],
+)
