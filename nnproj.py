@@ -38,10 +38,14 @@ for train_validate_index, test_index in train_test:
 	X_train_Validate, X_test = xdot[train_validate_index], xdot[test_index]
 	y_train_Validate, y_test = ydot[train_validate_index], ydot[test_index]
 
+#Placeholder for the input tensor
+x = tf.placeholder(tf.float32, shape=[240*320*3],None)
+y_ = tf.placeholder(tf.float32, shape=[2],None)
 
-x = tf.placeholder(tf.float32, shape=[None, 76800*3])
-y_ = tf.placeholder(tf.float32, shape=[None])
+#Run session
+sess.run(tf.initialize_all_variables())
 
+#weight intialization
 def weight_variable(shape):
   initial = tf.truncated_normal(shape, stddev=0.1)
   return tf.Variable(initial)
@@ -50,6 +54,7 @@ def bias_variable(shape):
   initial = tf.constant(0.1, shape=shape)
   return tf.Variable(initial)
 
+#define convolution and pooling
 def conv2d(x, W):
   return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
 
@@ -95,7 +100,7 @@ cross_entropy = -tf.reduce_sum(y_*tf.log(y_conv))
 train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
 correct_prediction = tf.equal(tf.argmax(y_conv,0), tf.argmax(y_,0))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-sess.run(tf.initialize_all_variables())
+
 
 print(np.shape(X_train_Validate))
 print(np.shape(y_train_Validate))
