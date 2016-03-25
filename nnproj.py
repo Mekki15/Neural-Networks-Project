@@ -4,39 +4,43 @@ import glob
 from PIL import Image
 from sklearn.preprocessing import StandardScaler
 from sklearn.cross_validation import StratifiedShuffleSplit
-from tensorflow.examples.tutorials.mnist import input_data
 
 sess = tf.InteractiveSession()
 
 NoBall = []
 Ball = []
-#Import No Ball images
+
+# Import no-ball images
 for filename_NoBall in glob.glob ('NaoCameraDataset/lower/img*.bmp'):
     img_data_NoBall = np.asarray(Image.open(filename_NoBall)).ravel()
-    #~ x_NoBall = img_data_NoBall.ravel()
     NoBall.append(img_data_NoBall)
 
-#Import ball images
+# Import ball images
 for filename_Ball in glob.glob ('NaoCameraDataset/lower/Ball/img*.bmp'):
     img_data_Ball = np.asarray(Image.open(filename_Ball)).ravel()
-    #~ x_Ball = img_data_Ball.ravel()
     Ball.append(img_data_Ball)
 
-print(np.shape(Ball))
+# Count images
+num_no_ball = np.shape(NoBall)[0]
+num_ball = np.shape(Ball)[0]
+
+# Create dataset (input images + labels)
+xdot = np.asarray(np.concatenate((NoBall, Ball), axis = 0))
+xdot = StandardScaler().fit_transform(xdot) 		# Do we need this??
+y_NoBall = np.concatenate((np.zeros((num_no_ball, 1)), np.ones((num_no_ball, 1))), axis=1)
+y_Ball = np.concatenate((np.ones((num_ball, 1)), np.zeros((num_ball, 1))), axis=1)
 print(np.shape(NoBall))
-x = np.concatenate((NoBall,Ball), axis = 0)
-x = np.asarray(x)
-xdot=x
-#~ xdot = StandardScaler().fit_transform(x)
-y_NoBall = np.zeros(622)
-y_Ball = np.ones(342) 
+print(np.shape(y_Ball))
+#~ y_Ball = np.ones(num_ball) 
 ydot = np.concatenate((y_NoBall,y_Ball),axis= 0)
+print(np.shape(ydot))
 
-
-train_test = StratifiedShuffleSplit(ydot, n_iter=1, train_size = 700  , test_size = 264)
+# Split into train set and test set 
+train_test = StratifiedShuffleSplit(ydot[:, 0], train_size = 0.7)
 for train_validate_index, test_index in train_test:
 	X_train_Validate, X_test = xdot[train_validate_index], xdot[test_index]
 	y_train_Validate, y_test = ydot[train_validate_index], ydot[test_index]
+
 
 #Placeholder for the input tensor
 x = tf.placeholder(tf.float32, shape=[240*320*3],None)
@@ -46,79 +50,105 @@ y_ = tf.placeholder(tf.float32, shape=[2],None)
 sess.run(tf.initialize_all_variables())
 
 #weight intialization
+
+# Weight constructor
+
 def weight_variable(shape):
-  initial = tf.truncated_normal(shape, stddev=0.1)
-  return tf.Variable(initial)
+	initial = tf.truncated_normal(shape, stddev=0.1)
+	return tf.Variable(initial)
 
+# Bias constructor
 def bias_variable(shape):
-  initial = tf.constant(0.1, shape=shape)
-  return tf.Variable(initial)
+	initial = tf.constant(0.1, shape=shape)
+	return tf.Variable(initial)
 
-#define convolution and pooling
+
+# Convolutional layer constructor
+
 def conv2d(x, W):
-  return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
+	return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
 
+# Pooling layer constructor
 def max_pool_2x2(x):
-  return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
+	return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
                         strides=[1, 2, 2, 1], padding='SAME')
 
-# first layer
+####
+# Input layer
+x = tf.placeholder(tf.float32, shape=[None, 76800*3])
+
+# Label reference
+y_ = tf.placeholder(tf.float32, shape=[None, 2])
+
+# First conv layer
 W_conv1 = weight_variable([5, 5, 3, 12])
 b_conv1 = bias_variable([12])
-
 x_image = tf.reshape(x, [-1,320,240,3])
-
 h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
+
+# First pool layer
 h_pool1 = max_pool_2x2(h_conv1)
 
-# second layer
+# Second conv layer
 W_conv2 = weight_variable([5, 5, 12, 24])
 b_conv2 = bias_variable([24])
-
 h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
+
+# Second pool layer
 h_pool2 = max_pool_2x2(h_conv2)
 
-# third
+# First fully connected layer
 W_fc1 = weight_variable([80 * 60 * 24, 100])
 b_fc1 = bias_variable([100])
-
 h_pool2_flat = tf.reshape(h_pool2, [-1, 80*60*24])
 h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
 
-# dropout
+# Dropout (to avoid overfitting)
 keep_prob = tf.placeholder(tf.float32)
 h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
 
-# softmax
-W_fc2 = weight_variable([100, 1])
-b_fc2 = bias_variable([1])
-
+# Second fully connected layer - Softmax
+W_fc2 = weight_variable([100, 2])
+b_fc2 = bias_variable([2])
 y_conv=tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
 
-# actual computation
+####
+# Back-propagation
 cross_entropy = -tf.reduce_sum(y_*tf.log(y_conv))
 train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
-correct_prediction = tf.equal(tf.argmax(y_conv,0), tf.argmax(y_,0))
+correct_prediction = tf.equal(tf.argmax(y_conv, 1), tf.argmax(y_, 1))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 
-print(np.shape(X_train_Validate))
-print(np.shape(y_train_Validate))
+
+# Initialize variables
+sess.run(tf.initialize_all_variables())
+
+
+#  Op to save the network
+saver = tf.train.Saver()
+
+# Extraxt a batch of random images from the training set
 def get_batch(n):
-	train_test = StratifiedShuffleSplit(y_train_Validate, n_iter=1, train_size = n, test_size = 700-n)
+	train_test = StratifiedShuffleSplit(y_train_Validate, n_iter=1, train_size = n)  # Change this!
 	for x_batch, test_index in train_test:
 		X_train_batch = X_train_Validate[x_batch]
 		y_train_batch = y_train_Validate[x_batch]
-	print(np.shape(X_train_batch))
 	return X_train_batch, y_train_batch
-  
-for i in range(100):
+
+# Training
+for i in range(1):
 	batch_x, batch_y = get_batch(50)
-	print(np.shape(batch_y))
-	if i%100 == 0:
-		train_accuracy = accuracy.eval(feed_dict={x:batch_x, y_: batch_y, keep_prob: 1.0})
-		print("step %d, training accuracy %g"%(i, train_accuracy))
+	#~ if i%100 == 0:
+	train_accuracy = accuracy.eval(feed_dict={x: batch_x, y_: batch_y, keep_prob: 1.0})
+	print("step %d, training accuracy %g"%(i, train_accuracy))
 	train_step.run(feed_dict={x: batch_x, y_: batch_y, keep_prob: 0.5})
 
+# Testing
 print("test accuracy %g"%accuracy.eval(feed_dict={x: X_test, y_: y_test, keep_prob: 1.0}))
+
+# Save the variables to disk
+save_path = saver.save(sess, "model.ckpt")
+print("Model saved in file: %s" % save_path)
+
 
