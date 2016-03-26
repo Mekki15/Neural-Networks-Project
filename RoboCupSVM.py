@@ -25,13 +25,13 @@ for filename_NoBall in glob.glob ('/home/ahmad/Datasets/NaoCameraDataset/lower/i
     img_data_NoBall = np.asarray(Image.open(filename_NoBall))
     x_NoBall = img_data_NoBall.ravel()
     NoBall.append(x_NoBall)
-      
+
 #Import ball images
 for filename_Ball in glob.glob ('/home/ahmad/Datasets/NaoCameraDataset/lower/Ball/img*.bmp'):
     img_data_Ball = np.asarray(Image.open(filename_Ball))
     x_Ball = img_data_Ball.ravel()
-    Ball.append(x_Ball)    
-   
+    Ball.append(x_Ball)
+
 x = np.concatenate((NoBall,Ball), axis = 0)
 x = np.asarray(x)
 x = StandardScaler().fit_transform(x)

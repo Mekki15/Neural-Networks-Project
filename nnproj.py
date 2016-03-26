@@ -27,6 +27,7 @@ num_ball = np.shape(Ball)[0]
 # Create dataset (input images + labels)
 xdot = np.asarray(np.concatenate((NoBall, Ball), axis = 0))
 xdot = StandardScaler().fit_transform(xdot) 		# Do we need this??
+
 y_NoBall = np.concatenate((np.zeros((num_no_ball, 1)), np.ones((num_no_ball, 1))), axis=1)
 y_Ball = np.concatenate((np.ones((num_ball, 1)), np.zeros((num_ball, 1))), axis=1)
 print(np.shape(NoBall))
@@ -69,8 +70,8 @@ x = tf.placeholder(tf.float32, shape=[None, 76800*3])
 y_ = tf.placeholder(tf.float32, shape=[None, 2])
 
 # First conv layer
-W_conv1 = weight_variable([5, 5, 3, 12])
-b_conv1 = bias_variable([12])
+W_conv1 = weight_variable([12, 12, 3, 16])
+b_conv1 = bias_variable([16])
 x_image = tf.reshape(x, [-1,320,240,3])
 h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
 
@@ -78,17 +79,17 @@ h_conv1 = tf.nn.relu(conv2d(x_image, W_conv1) + b_conv1)
 h_pool1 = max_pool_2x2(h_conv1)
 
 # Second conv layer
-W_conv2 = weight_variable([5, 5, 12, 24])
-b_conv2 = bias_variable([24])
+W_conv2 = weight_variable([12, 12, 16, 32])
+b_conv2 = bias_variable([32])
 h_conv2 = tf.nn.relu(conv2d(h_pool1, W_conv2) + b_conv2)
 
 # Second pool layer
 h_pool2 = max_pool_2x2(h_conv2)
 
 # First fully connected layer
-W_fc1 = weight_variable([80 * 60 * 24, 100])
-b_fc1 = bias_variable([100])
-h_pool2_flat = tf.reshape(h_pool2, [-1, 80*60*24])
+W_fc1 = weight_variable([80 * 60 * 32, 512])
+b_fc1 = bias_variable([512])
+h_pool2_flat = tf.reshape(h_pool2, [-1, 80*60*32])
 h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
 
 # Dropout (to avoid overfitting)
@@ -96,7 +97,7 @@ keep_prob = tf.placeholder(tf.float32)
 h_fc1_drop = tf.nn.dropout(h_fc1, keep_prob)
 
 # Second fully connected layer - Softmax
-W_fc2 = weight_variable([100, 2])
+W_fc2 = weight_variable([512, 2])
 b_fc2 = bias_variable([2])
 y_conv=tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
 
@@ -122,7 +123,7 @@ def get_batch(n):
 	return X_train_batch, y_train_batch
 
 # Training
-for i in range(1):
+for i in range(100):
 	batch_x, batch_y = get_batch(50)
 	#~ if i%100 == 0:
 	train_accuracy = accuracy.eval(feed_dict={x: batch_x, y_: batch_y, keep_prob: 1.0})
